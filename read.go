@@ -142,7 +142,11 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 		if len(record) != 23 {
 			log.Fatalf("length of record %d is not 23 (%v)", len(record), record)
 		}
-		_ = record
+
+		err = pgf.plugin.process(record)
+		if err != nil {
+			log.Fatalf("the plugin's Process function failed: %s", err)
+		}
 	}
 }
 
