@@ -1,5 +1,5 @@
 package pgfplugin
 
-type PGFisherPlugin interface {
+type Plugin interface {
 	Process(record []string) error
 }

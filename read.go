@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	csv "github.com/johto/go-csvt"
+	"github.com/johto/pgfisher/pgfplugin"
 	"fmt"
 	"fsnotify"
 	"io"
@@ -74,16 +75,13 @@ func (pgf *PGFisher) loadPlugin() error {
 	if err != nil {
 		return fmt.Errorf("could not find symbol for Init method")
 	}
-	processSym, err := so.Lookup("PGFisherPluginProcessRecord")
+	init := initSym.(func(args string) (plugin interface{}, err error))
+	pl, err := init("")
 	if err != nil {
-		return fmt.Errorf("could not find symbol for Process method")
+		return err
 	}
-	plugin := &PGFisherPlugin{
-		init: initSym.(func() error),
-		process: processSym.(func(record []string) error),
-	}
-	pgf.plugin = plugin
-	return plugin.init()
+	pgf.plugin = pl.(pgfplugin.Plugin)
+	return nil
 }
 
 func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *LogStreamPosition) error {
@@ -137,7 +135,7 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 			log.Fatalf("length of record %d is not 23 (%v)", len(record), record)
 		}
 
-		err = pgf.plugin.process(record)
+		err = pgf.plugin.Process(record)
 		if err != nil {
 			log.Fatalf("the plugin's Process function failed: %s", err)
 		}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"github.com/johto/pgfisher/pgfplugin"
 	"log"
 	"os"
 	"regexp"
@@ -15,16 +16,11 @@ type LogStreamPosition struct {
 	Offset int64
 }
 
-type PGFisherPlugin struct {
-	init func() error
-	process func(record []string) error
-}
-
 type PGFisher struct {
 	dbh *sql.DB
 
 	pluginPath string
-	plugin *PGFisherPlugin
+	plugin pgfplugin.Plugin
 
 	// Channel used by directoryWatcherLoop to communicate the next file the
 	// main loop should use.
