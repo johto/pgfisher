@@ -47,9 +47,10 @@ func (pgf *PGFisher) Tail() {
 	log.Printf("starting to tail from file %q, position %d", streamPos.Filename, streamPos.Offset)
 
 	for {
-		fh, err := os.Open(streamPos.Filename)
+		filepath := path.Join(logPath, streamPos.Filename)
+		fh, err := os.Open(filepath)
 		if err != nil {
-			log.Fatalf("could not open file %q: %s", streamPos.Filename, err)
+			log.Fatalf("could not open file %q: %s", filepath, err)
 		}
 
 		err = pgf.readFromFileUntilEOF(fh, streamPos)
