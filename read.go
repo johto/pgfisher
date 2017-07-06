@@ -34,7 +34,7 @@ func (pgf *PGFisher) Tail() {
 			Offset: 0,
 		}
 	}
-	epollFilenameChan, files := pgf.doInitialRead(path.Base(streamPos.Filename))
+	epollFilenameChan, files := pgf.doInitialRead(streamPos.Filename)
 	if streamPos.Filename == "" {
 		if len(files) == 0 {
 			log.Fatalf("could not find any suitable log files in directory %s", logPath)
@@ -192,14 +192,14 @@ func (pgf *PGFisher) fsnotifyWatcherLoop(fsw *fsnotify.Watcher, pathGlob string,
 		select {
 			case event := <-fsw.Events:
 				if event.Op & fsnotify.Create == fsnotify.Create {
-					filename := event.Name
-					match, err := filepath.Match(pathGlob, filename)
+					path := event.Name
+					match, err := filepath.Match(pathGlob, path)
 					if err != nil {
 						log.Panic(err)
 					}
 					if match {
-						log.Printf("fsnotify: newly created file %q matches the glob", event.Name)
-						newFilenameChan <- filename
+						log.Printf("fsnotify: newly created file %q matches the glob", path)
+						newFilenameChan <- filepath.Base(path)
 					}
 				}
 
