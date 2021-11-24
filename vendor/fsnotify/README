@@ -1,5 +1,0 @@
-This is a fork of the https://github.com/go-fsnotify/fsnotify, but with one
-important change: when watching a directory, we only watch for newly created
-files and NOT modifications to the files within that directory.  This is really
-important in the production environment in order to avoid the program from
-getting woken up hundreds of times every second with nothing to do.

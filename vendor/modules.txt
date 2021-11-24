@@ -1,0 +1,18 @@
+# github.com/fsnotify/fsnotify v1.5.1
+## explicit; go 1.13
+github.com/fsnotify/fsnotify
+# github.com/johto/go-csvt v0.0.0-20170705123905-f671c8103082
+## explicit
+github.com/johto/go-csvt
+# github.com/johto/pgfisher v0.0.0-20170710161011-41ae6a7ced45
+## explicit
+github.com/johto/pgfisher/pgfplugin
+# github.com/lib/pq v1.10.4
+## explicit; go 1.13
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
+# golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
+## explicit; go 1.17
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
