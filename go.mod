@@ -9,8 +9,4 @@ require (
 	github.com/lib/pq v1.10.4
 )
 
-exclude github.com/johto/pgfisher/plugin v1.0.0
-
 require golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-
-replace github.com/johto/pgfisher/plugin => ./plugin
