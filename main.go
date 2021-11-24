@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	"github.com/johto/pgfisher/pgfplugin"
+	pgfplugin "github.com/johto/pgfisher/plugin"
 	"log"
 	"os"
 	"regexp"

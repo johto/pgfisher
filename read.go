@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	csv "github.com/johto/go-csvt"
 	"github.com/fsnotify/fsnotify"
-	"github.com/johto/pgfisher/pgfplugin"
+	pgfplugin "github.com/johto/pgfisher/plugin"
 	"fmt"
 	"io"
 	"log"
