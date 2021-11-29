@@ -2,12 +2,8 @@ github.com/fsnotify/fsnotify v1.5.1 h1:mZcQUHVQUQWoPXXtuf9yuEXKudkV2sx1E06UadKWp
 github.com/fsnotify/fsnotify v1.5.1/go.mod h1:T3375wBYaZdLLcVNkcVbzGHY7f1l/uK5T5Ai1i3InKU=
 github.com/johto/go-csvt v0.0.0-20170705123905-f671c8103082 h1:cFeaETABdtFJooSG2KjxmqPwOIaIWxKVZPx9jnfAhjg=
 github.com/johto/go-csvt v0.0.0-20170705123905-f671c8103082/go.mod h1:vBRyjpZztXQrLvkJRXuc0VCAoWWw3McHOaq/bnjCqmo=
-github.com/johto/pgfisher/plugin v1.0.0 h1:0WEKP5INhuzIeEQyTV7UKY6sm/WcMQ5rZwvQUa6yckU=
-github.com/johto/pgfisher/plugin v1.0.0/go.mod h1:ro2tO7ThiraOhayvgiKpxI4CX4GstN9PvQKCmixptSA=
-github.com/johto/pgfisher/plugin v1.0.1 h1:K4TQxYN18mWVk1ljPZDSKI7yhksuCyrNtCC298VTY14=
-github.com/johto/pgfisher/plugin v1.0.1/go.mod h1:ro2tO7ThiraOhayvgiKpxI4CX4GstN9PvQKCmixptSA=
-github.com/lib/pq v1.10.4 h1:SO9z7FRPzA03QhHKJrH5BXA6HU1rS4V2nIVrrNC1iYk=
-github.com/lib/pq v1.10.4/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
+github.com/johto/pgfisher/plugin v1.1.0 h1:FwVllqypMLSIOlPJ6j9mzTXwHF2BHgwHdLKvtqq2ejU=
+github.com/johto/pgfisher/plugin v1.1.0/go.mod h1:ro2tO7ThiraOhayvgiKpxI4CX4GstN9PvQKCmixptSA=
 go.etcd.io/bbolt v1.3.6 h1:/ecaJf0sk1l4l6V4awd65v2C3ILy7MSj+s/x1ADCIMU=
 go.etcd.io/bbolt v1.3.6/go.mod h1:qXsaaIqmgQH0T+OPdb99Bf+PKfBBQVAdyD6TY9G8XM4=
 golang.org/x/sys v0.0.0-20200923182605-d9f96fdee20d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
