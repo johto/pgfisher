@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type Plugin interface {
@@ -10,7 +11,7 @@ type Plugin interface {
 
 const (
 	LogTimeAttno = iota
-	UsernameAttno
+	UserNameAttno
 	DatabaseNameAttno
 	ProcessIDAttno
 	ConnectionFromAttno
@@ -18,7 +19,7 @@ const (
 	SessionLineNumAttno
 	CommandTagAttno
 	SessionStartTimeAttno
-	VirtualTransactionIdAttno
+	VirtualTransactionIDAttno
 	TransactionIDAttno
 	ErrorSeverityAttno
 	SQLStateAttno
@@ -34,7 +35,7 @@ const (
 	ApplicationNameAttno
 	BackendTypeAttno
 	LeaderPidAttno
-	QueryIdAttno
+	QueryIDAttno
 )
 
 type LogEntry struct {
@@ -52,8 +53,60 @@ func NewLogEntry(record []string) (*LogEntry, error) {
 	}, nil
 }
 
-func (le *LogEntry) Username() string {
-	return le.record[UsernameAttno]
+func (le *LogEntry) LogTimeString() string {
+	return le.record[LogTimeAttno]
+}
+
+func (le *LogEntry) UserName() string {
+	return le.record[UserNameAttno]
+}
+
+func (le *LogEntry) DatabaseName() string {
+	return le.record[DatabaseNameAttno]
+}
+
+func (le *LogEntry) ProcessID() int {
+	n, err := strconv.ParseInt(le.record[ProcessIDAttno], 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("invalid process id %s", le.record[ProcessIDAttno]))
+	}
+	return int(n)
+}
+
+func (le *LogEntry)ConnectionFrom() string {
+	return le.record[ConnectionFromAttno]
+}
+
+func (le *LogEntry) SessionID() string {
+	return le.record[DatabaseNameAttno]
+}
+
+func (le *LogEntry) SessionLineNum() int64 {
+	n, err := strconv.ParseInt(le.record[SessionLineNumAttno], 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("invalid session line num %s", le.record[SessionLineNumAttno]))
+	}
+	return n
+}
+
+func (le *LogEntry) CommandTag() string {
+	return le.record[CommandTagAttno]
+}
+
+func (le *LogEntry) SessionStartTimeString() string {
+	return le.record[SessionStartTimeAttno]
+}
+
+func (le *LogEntry) VirtualTransactionID() string {
+	return le.record[]
+}
+
+func (le *LogEntry) TransactionID() int64 {
+	n, err := strconv.ParseInt(le.record[TransactionIDAttno], 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("invalid transaction id %s", le.record[TransactionIDAttno]))
+	}
+	return n
 }
 
 func (le *LogEntry) ErrorSeverity() string {
@@ -66,4 +119,48 @@ func (le *LogEntry) SQLState() string {
 
 func (le *LogEntry) Message() string {
 	return le.record[MessageAttno]
+}
+
+func (le *LogEntry) Detail() string {
+	return le.record[DetailAttno]
+}
+
+func (le *LogEntry) Hint() string {
+	return le.record[HintAttno]
+}
+
+func (le *LogEntry) InternalQuery() string {
+	return le.record[InternalQueryAttno]
+}
+
+func (le *LogEntry) InternalQueryPos() int {
+	n, err := strconv.ParseInt(le.record[InternalQueryPosAttno], 10, 32)
+	if err != nil {
+		panic(fmt.Sprintf("invalid internal query pos %s", le.record[InternalQueryPosAttno]))
+	}
+	return int(n)
+}
+
+func (le *LogEntry) Context() string {
+	return le.record[ContextAttno]
+}
+
+func (le *LogEntry) Query() string {
+	return le.record[QueryAttno]
+}
+
+func (le *LogEntry) QueryPos() int {
+	n, err := strconv.ParseInt(le.record[QueryPosAttno], 10, 32)
+	if err != nil {
+		panic(fmt.Sprintf("invalid query pos %s", le.record[QueryPosAttno]))
+	}
+	return int(n)
+}
+
+func (le *LogEntry) Location() string {
+	return le.record[LocationAttno]
+}
+
+func (le *LogEntry) ApplicationName() string {
+	return le.record[ApplicationNameAttno]
 }
