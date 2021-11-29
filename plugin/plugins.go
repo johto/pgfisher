@@ -32,6 +32,9 @@ const (
 	QueryPosAttno
 	LocationAttno
 	ApplicationNameAttno
+	BackendTypeAttno
+	LeaderPidAttno
+	QueryIdAttno
 )
 
 type LogEntry struct {
@@ -39,6 +42,8 @@ type LogEntry struct {
 }
 
 func NewLogEntry(record []string) (*LogEntry, error) {
+	// All supported versions should have the fields up to and including
+	// application_name.
 	if len(record) < 1 + ApplicationNameAttno {
 		return nil, fmt.Errorf("unexpected record length of %d; expected at least %d", len(record), 1 + ApplicationNameAttno)
 	}

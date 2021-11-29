@@ -133,9 +133,8 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 		if err != nil {
 			return err
 		}
-		// TODO: allow this to be configured
-		if len(record) != 23 {
-			log.Fatalf("length of record %d is not 23 (%v)", len(record), record)
+		if len(record) < 23 {
+			log.Fatalf("unexpected record length %d", len(record))
 		}
 
 		err = pgf.plugin.Process(record)
