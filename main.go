@@ -1,14 +1,14 @@
 package main
 
 import (
-	"database/sql"
+	bolt "go.etcd.io/bbolt"
 	"fmt"
-	_ "github.com/lib/pq"
-	pgfplugin "github.com/johto/pgfisher/plugin"
 	"log"
 	"os"
+	pgfplugin "github.com/johto/pgfisher/plugin"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type LogStreamPosition struct {
@@ -17,7 +17,7 @@ type LogStreamPosition struct {
 }
 
 type PGFisher struct {
-	dbh *sql.DB
+	dbh *bolt.DB
 
 	pluginPath string
 	plugin pgfplugin.Plugin
@@ -41,20 +41,24 @@ var (
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "usage: %s LOGPATH PLUGIN\n", os.Args[0])
+	if len(os.Args) != 4 {
+		fmt.Fprintf(os.Stderr, "usage: %s DB_PATH LOG_PATH PLUGIN_PATH\n", os.Args[0])
 		os.Exit(1)
 	}
-	logPath = os.Args[1]
-	pluginPath := os.Args[2]
+	dbPath := os.Args[1]
+	logPath = os.Args[2]
+	pluginPath := os.Args[3]
 
-	conninfo := "fallback_application_name=pgfisher"
-	dbh, err := sql.Open("postgres", conninfo)
+	dbh, err := bolt.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
-		log.Fatalf("sql.Open() failed: %s", err)
+		log.Fatalf("could not open database: %s", err)
 	}
-	if err := dbh.Ping(); err != nil {
-		log.Fatalf("could not open connection to postgres server: %s", err)
+	err = dbh.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("pgfisher"))
+		return err
+	})
+	if err != nil {
+		log.Fatalf("could not update database: %s", err)
 	}
 
 	pgf := &PGFisher{

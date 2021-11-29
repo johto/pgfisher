@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	bolt "go.etcd.io/bbolt"
 	csv "github.com/johto/go-csvt"
 	"github.com/fsnotify/fsnotify"
 	pgfplugin "github.com/johto/pgfisher/plugin"
@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"plugin"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -102,7 +103,8 @@ func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *LogStreamPosit
 				return nil
 			}
 
-			// If we hit EOF, consider changing to the next file
+			// If we hit EOF, consider changing to the next file in the select
+			// below.
 			var optNewFilenameChan <-chan string
 			if nextFilename == "" && err == io.EOF {
 				optNewFilenameChan = pgf.newFilenameChan
@@ -150,37 +152,54 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 }
 
 func (pgf *PGFisher) persistLogStreamPosition(pos *LogStreamPosition) {
-	res, err := pgf.dbh.Exec("UPDATE pgfisher SET filename = $1, filepos = $2", pos.Filename, pos.Offset)
+	err := pgf.dbh.Update(func (tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("pgfisher"))
+		if bucket == nil {
+			panic("nil bucket")
+		}
+		err := bucket.Put([]byte("filename"), []byte(pos.Filename))
+		if err != nil {
+			return err
+		}
+		err = bucket.Put([]byte("filepos"), []byte(strconv.FormatInt(pos.Offset, 10)))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		log.Fatalf("could not write log position to database: %s", err)
-	}
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		log.Fatalf("RowsAffected() failed: %s", err)
-	}
-	if rowsAffected != 1 {
-		log.Fatalf("could not write log position to database: unexpected number of rows affected %d", rowsAffected)
+		log.Fatalf("could not write to %s: %s", pgf.dbh.Path(), err)
 	}
 	pgf.bytesReadSinceLastPersist = 0
 }
 
 func (pgf *PGFisher) fetchInitialLogStreamPosition() (*LogStreamPosition, error) {
-	var initialFilename sql.NullString
-	var initialFilepos sql.NullInt64
+	var initialFilename []byte
+	var initialFilepos []byte
 
-	err := pgf.dbh.QueryRow("SELECT filename, filepos FROM pgfisher").Scan(&initialFilename, &initialFilepos)
-	if err == sql.ErrNoRows {
-		_, err = pgf.dbh.Exec("INSERT INTO pgfisher VALUES (NULL, NULL)")
-		if err != nil {
-			return nil, fmt.Errorf(`could not INSERT into "pgfisher": %s`, err)
+	err := pgf.dbh.View(func (tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("pgfisher"))
+		if bucket == nil {
+			panic("nil bucket")
 		}
-	} else if err != nil {
-		return nil, fmt.Errorf("could not fetch initial position: %s", err)
+		initialFilename = bucket.Get([]byte("filename"))
+		initialFilepos = bucket.Get([]byte("filepos"))
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch initial position from %s: %s", pgf.dbh.Path(), err)
 	}
-	if initialFilename.Valid {
+	if (initialFilename != nil) != (initialFilepos != nil) {
+		panic(fmt.Sprintf("corrupt database: initialFilename %v initialFilepos %v", initialFilename, initialFilepos))
+	}
+	if initialFilename != nil {
+		offset, err := strconv.ParseInt(string(initialFilepos), 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("corrupt database: initialFilepos %v", initialFilepos))
+		}
 		return &LogStreamPosition{
-			Filename: initialFilename.String,
-			Offset: initialFilepos.Int64,
+			Filename: string(initialFilename),
+			Offset: offset,
 		}, nil
 	}
 	return nil, nil
@@ -230,6 +249,9 @@ func (pgf *PGFisher) doInitialRead(initialFilename string) (<-chan string, []str
 		log.Println("unable to find any log files, did you specify your glob correctly?")
 		log.Println(filepath.Join(logPath, LogGlobPattern))
 		os.Exit(1)
+	}
+	for i := range files {
+		files[i] = filepath.Base(files[i])
 	}
 
 	// Now drain all the events, incorporating any files created into the

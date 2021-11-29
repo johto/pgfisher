@@ -1,4 +1,4 @@
-module main
+module pgfisher
 
 go 1.17
 
@@ -7,6 +7,7 @@ require (
 	github.com/johto/go-csvt v0.0.0-20170705123905-f671c8103082
 	github.com/johto/pgfisher/plugin v1.0.0
 	github.com/lib/pq v1.10.4
+	go.etcd.io/bbolt v1.3.6
 )
 
 require golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
