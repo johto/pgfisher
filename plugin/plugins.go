@@ -98,7 +98,7 @@ func (le *LogEntry) SessionStartTimeString() string {
 }
 
 func (le *LogEntry) VirtualTransactionID() string {
-	return le.record[]
+	return le.record[VirtualTransactionIDAttno]
 }
 
 func (le *LogEntry) TransactionID() int64 {
