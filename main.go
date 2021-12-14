@@ -15,18 +15,6 @@ type LogStreamPosition struct {
 	Offset int64
 }
 
-type PGFisher struct {
-	dbh *bolt.DB
-
-	plugin Plugin
-
-	// Channel used by directoryWatcherLoop to communicate the next file the
-	// main loop should use.
-	newFilenameChan chan string
-
-	bytesReadSinceLastPersist int64
-}
-
 var (
 	logPath string
 	// These should be read via flags
@@ -58,8 +46,6 @@ func main() {
 		log.Fatalf("could not update database: %s", err)
 	}
 
-	pgf := &PGFisher{
-		dbh: dbh,
-	}
-	pgf.Tail()
+	pgf := NewPGFisher(dbh, ":9488")
+	pgf.MainLoop()
 }

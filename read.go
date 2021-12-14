@@ -7,21 +7,91 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+    "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func (pgf *PGFisher) Tail() {
+type PGFisher struct {
+	dbh *bolt.DB
+	prometheusListener net.Listener
+	prometheusRegistry *prometheus.Registry
+
+	plugin Plugin
+
+	// Channel used by directoryWatcherLoop to communicate the next file the
+	// main loop should use.
+	newFilenameChan chan string
+
+	bytesReadTotal prometheus.Counter
+	bytesReadSinceLastPersist int64
+}
+
+func NewPGFisher(dbh *bolt.DB, prometheusAddr string) *PGFisher {
+	listener, err := net.Listen("tcp", prometheusAddr)
+	if err != nil {
+		log.Fatalf("could not start listening on %s: %s", prometheusAddr, err)
+	}
+	registry := prometheus.NewPedanticRegistry()
+
+	startTime := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "pgfisher_start_time_seconds",
+			Help: "Start time of the process since unix epoch in seconds.",
+		},
+	)
+	startTime.Set(float64(time.Now().UnixNano()) / 1e9)
+	registry.MustRegister(startTime)
+
+	bytesReadTotal := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "pgfisher_read_bytes_total",
+			Help: "The total number of log bytes read since process start.",
+		},
+	)
+	registry.MustRegister(bytesReadTotal)
+
+	pgf := &PGFisher{
+		dbh: dbh,
+		prometheusListener: listener,
+		prometheusRegistry: registry,
+		newFilenameChan: make(chan string, 1),
+		bytesReadTotal: bytesReadTotal,
+		bytesReadSinceLastPersist: 0,
+	}
+	return pgf
+}
+
+func (pgf *PGFisher) MainLoop() {
 	pgf.newFilenameChan = make(chan string, 1)
 
 	err := pgf.loadPlugin()
 	if err != nil {
 		log.Fatalf("could not initialize plugin: %s", err)
 	}
+
+	go func() {
+		muxer := http.NewServeMux()
+		handler := promhttp.HandlerFor(
+			pgf.prometheusRegistry,
+			promhttp.HandlerOpts{
+				ErrorLog: log.Default(),
+			},
+		)
+		muxer.Handle("/metrics", handler)
+		s := &http.Server{
+			Handler: muxer,
+		}
+		log.Fatal(s.Serve(pgf.prometheusListener))
+	}()
 
 	streamPos, err := pgf.fetchInitialLogStreamPosition()
 	if err != nil {
@@ -68,7 +138,12 @@ func (pgf *PGFisher) Tail() {
 
 func (pgf *PGFisher) loadPlugin() error {
 	var err error
-	pgf.plugin, err = PGFisherPluginInit(pgf.dbh, "")
+	args := PluginInitArgs{
+		dbh: pgf.dbh,
+		prometheusRegistry: pgf.prometheusRegistry,
+		args: "",
+	}
+	pgf.plugin, err = PGFisherPluginInit(args)
 	return err
 }
 
@@ -129,6 +204,7 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 		}
 
 		streamPos.Offset += reader.ByteOffset
+		pgf.bytesReadTotal.Add(float64(reader.ByteOffset))
 		pgf.bytesReadSinceLastPersist += reader.ByteOffset
 		if pgf.bytesReadSinceLastPersist >= 1024 * 1024 * 32 {
 			pgf.persistLogStreamPosition(streamPos)

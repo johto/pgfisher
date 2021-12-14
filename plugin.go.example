@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-func PGFisherPluginInit(dbh *bolt.DB, args string) (Plugin, error) {
+func PGFisherPluginInit(args PluginInitArgs) (Plugin, error) {
 	plugin := &ExamplePlugin{
-		dbh: dbh,
+		dbh: args.dbh,
 	}
 	return plugin, nil
 }

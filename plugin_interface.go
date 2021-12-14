@@ -1,9 +1,18 @@
 package main
 
 import (
+	bolt "go.etcd.io/bbolt"
 	"fmt"
 	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+type PluginInitArgs struct {
+	dbh *bolt.DB
+	prometheusRegistry *prometheus.Registry
+	args string
+}
 
 type Plugin interface {
 	Process(record []string) error
