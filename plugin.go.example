@@ -21,7 +21,6 @@ func (p *ExamplePlugin) Process(record []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s", le.Message())
+	fmt.Printf("%s\n", le.Message())
 	return nil
 }
-
