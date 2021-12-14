@@ -1,0 +1,27 @@
+package main
+
+import (
+	bolt "go.etcd.io/bbolt"
+	"fmt"
+)
+
+func PGFisherPluginInit(dbh *bolt.DB, args string) (Plugin, error) {
+	plugin := &ExamplePlugin{
+		dbh: dbh,
+	}
+	return plugin, nil
+}
+
+type ExamplePlugin struct {
+	dbh *bolt.DB
+}
+
+func (p *ExamplePlugin) Process(record []string) error {
+	le, err := NewLogEntry(record)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s", le.Message())
+	return nil
+}
+
