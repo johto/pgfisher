@@ -4,14 +4,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 	csv "github.com/johto/go-csvt"
 	"github.com/fsnotify/fsnotify"
-	pgfplugin "github.com/johto/pgfisher/plugin"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
-	"plugin"
 	"sort"
 	"strconv"
 	"time"
@@ -22,7 +20,7 @@ func (pgf *PGFisher) Tail() {
 
 	err := pgf.loadPlugin()
 	if err != nil {
-		log.Fatalf("could not initialize plugin %s: %s", pgf.pluginPath, err)
+		log.Fatalf("could not initialize plugin: %s", err)
 	}
 
 	streamPos, err := pgf.fetchInitialLogStreamPosition()
@@ -69,21 +67,9 @@ func (pgf *PGFisher) Tail() {
 }
 
 func (pgf *PGFisher) loadPlugin() error {
-	so, err := plugin.Open(pgf.pluginPath)
-	if err != nil {
-		return err
-	}
-	initSym, err := so.Lookup("PGFisherPluginInit")
-	if err != nil {
-		return fmt.Errorf("could not find symbol for Init method")
-	}
-	init := initSym.(func(args string) (plugin interface{}, err error))
-	pl, err := init("")
-	if err != nil {
-		return err
-	}
-	pgf.plugin = pl.(pgfplugin.Plugin)
-	return nil
+	var err error
+	pgf.plugin, err = PGFisherPluginInit("")
+	return err
 }
 
 func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *LogStreamPosition) error {

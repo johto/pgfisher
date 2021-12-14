@@ -1,0 +1,21 @@
+package main
+
+import "fmt"
+
+type ExamplePlugin struct {
+}
+
+func (p *ExamplePlugin) Process(record []string) error {
+	le, err := NewLogEntry(record)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s", le.Message())
+	return nil
+}
+
+func PGFisherPluginInit(args string) (Plugin, error) {
+	plugin := &ExamplePlugin{
+	}
+	return plugin, nil
+}

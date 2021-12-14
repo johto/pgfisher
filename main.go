@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	pgfplugin "github.com/johto/pgfisher/plugin"
 	"regexp"
 	"strings"
 	"time"
@@ -19,8 +18,7 @@ type LogStreamPosition struct {
 type PGFisher struct {
 	dbh *bolt.DB
 
-	pluginPath string
-	plugin pgfplugin.Plugin
+	plugin Plugin
 
 	// Channel used by directoryWatcherLoop to communicate the next file the
 	// main loop should use.
@@ -41,13 +39,12 @@ var (
 )
 
 func main() {
-	if len(os.Args) != 4 {
-		fmt.Fprintf(os.Stderr, "usage: %s DB_PATH LOG_PATH PLUGIN_PATH\n", os.Args[0])
+	if len(os.Args) != 3 {
+		fmt.Fprintf(os.Stderr, "usage: %s DB_PATH LOG_PATH\n", os.Args[0])
 		os.Exit(1)
 	}
 	dbPath := os.Args[1]
 	logPath = os.Args[2]
-	pluginPath := os.Args[3]
 
 	dbh, err := bolt.Open(dbPath, 0644, &bolt.Options{Timeout: time.Second})
 	if err != nil {
@@ -63,8 +60,6 @@ func main() {
 
 	pgf := &PGFisher{
 		dbh: dbh,
-
-		pluginPath: pluginPath,
 	}
 	pgf.Tail()
 }
