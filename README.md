@@ -14,6 +14,7 @@ Writing a plugin
 
 The code in this repository does not build as provided.  Any user of this
 project is expected to write their own "plugin" and drop it into a file called
-plugin.go.  An example of such a plugin can be found in plugin.go.example.
+plugin.go.  An example of such a plugin can be found in
+[plugin.go.example](https://github.com/johto/pgfisher/blob/master/plugin.go.example).
 
 The plugin should only use APIs from plugin\_interface.go.
