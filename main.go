@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-type LogStreamPosition struct {
-	Filename string
-	Offset int64
-}
-
 var (
 	logPath string
 	// These should be read via flags
@@ -38,14 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not open database: %s", err)
 	}
-	err = dbh.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("pgfisher"))
-		return err
-	})
-	if err != nil {
-		log.Fatalf("could not update database: %s", err)
-	}
-
 	pgf := NewPGFisher(dbh, ":9488")
 	pgf.MainLoop()
 }

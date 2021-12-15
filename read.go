@@ -4,6 +4,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 	csv "github.com/johto/go-csvt"
 	"github.com/fsnotify/fsnotify"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,12 +14,16 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
     "github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+type LogStreamPosition struct {
+	Filename string `json:"filename"`
+	Offset int64 `json:"offset"`
+}
 
 type PGFisher struct {
 	dbh *bolt.DB
@@ -36,6 +41,14 @@ type PGFisher struct {
 }
 
 func NewPGFisher(dbh *bolt.DB, prometheusAddr string) *PGFisher {
+	err := dbh.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("pgfisher"))
+		return err
+	})
+	if err != nil {
+		log.Fatalf("could not update database: %s", err)
+	}
+
 	listener, err := net.Listen("tcp", prometheusAddr)
 	if err != nil {
 		log.Fatalf("could not start listening on %s: %s", prometheusAddr, err)
@@ -213,20 +226,17 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 }
 
 func (pgf *PGFisher) persistLogStreamPosition(pos *LogStreamPosition) {
-	err := pgf.dbh.Update(func (tx *bolt.Tx) error {
+	data, err := json.Marshal(pos)
+	if err != nil {
+		panic(err)
+	}
+
+	err = pgf.dbh.Update(func (tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("pgfisher"))
 		if bucket == nil {
 			panic("nil bucket")
 		}
-		err := bucket.Put([]byte("filename"), []byte(pos.Filename))
-		if err != nil {
-			return err
-		}
-		err = bucket.Put([]byte("filepos"), []byte(strconv.FormatInt(pos.Offset, 10)))
-		if err != nil {
-			return err
-		}
-		return nil
+		return bucket.Put([]byte("logStreamPosition"), data)
 	})
 	if err != nil {
 		log.Fatalf("could not write to %s: %s", pgf.dbh.Path(), err)
@@ -235,35 +245,27 @@ func (pgf *PGFisher) persistLogStreamPosition(pos *LogStreamPosition) {
 }
 
 func (pgf *PGFisher) fetchInitialLogStreamPosition() (*LogStreamPosition, error) {
-	var initialFilename []byte
-	var initialFilepos []byte
-
+	var streamPosition *LogStreamPosition
 	err := pgf.dbh.View(func (tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("pgfisher"))
 		if bucket == nil {
 			panic("nil bucket")
 		}
-		initialFilename = bucket.Get([]byte("filename"))
-		initialFilepos = bucket.Get([]byte("filepos"))
+		data := bucket.Get([]byte("logStreamPosition"))
+		if data != nil {
+			var lsp LogStreamPosition
+			err := json.Unmarshal(data, &lsp)
+			if err != nil {
+				return fmt.Errorf("could not unmarshal logStreamPosition: %s", err)
+			}
+			streamPosition = &lsp
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch initial position from %s: %s", pgf.dbh.Path(), err)
 	}
-	if (initialFilename != nil) != (initialFilepos != nil) {
-		panic(fmt.Sprintf("corrupt database: initialFilename %v initialFilepos %v", initialFilename, initialFilepos))
-	}
-	if initialFilename != nil {
-		offset, err := strconv.ParseInt(string(initialFilepos), 10, 64)
-		if err != nil {
-			panic(fmt.Sprintf("corrupt database: initialFilepos %v", initialFilepos))
-		}
-		return &LogStreamPosition{
-			Filename: string(initialFilename),
-			Offset: offset,
-		}, nil
-	}
-	return nil, nil
+	return streamPosition, nil
 }
 
 // runs in its own goroutine
