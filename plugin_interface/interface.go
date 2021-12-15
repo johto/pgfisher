@@ -1,4 +1,4 @@
-package main
+package plugin_interface
 
 import (
 	bolt "go.etcd.io/bbolt"
@@ -10,9 +10,9 @@ import (
 )
 
 type PluginInitArgs struct {
-	dbh *bolt.DB
-	prometheusRegistry *prometheus.Registry
-	args string
+	DBH *bolt.DB
+	PrometheusRegistry *prometheus.Registry
+	Args string
 }
 
 type LogStreamPosition struct {

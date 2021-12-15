@@ -13,6 +13,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	plugin "github.com/johto/pgfisher/plugin"
+	shared "github.com/johto/pgfisher/plugin_interface"
 	"sort"
 	"time"
 
@@ -25,7 +27,7 @@ type PGFisher struct {
 	prometheusListener net.Listener
 	prometheusRegistry *prometheus.Registry
 
-	plugin Plugin
+	plugin shared.Plugin
 
 	// Channel used by directoryWatcherLoop to communicate the next file the
 	// main loop should use.
@@ -106,7 +108,7 @@ func (pgf *PGFisher) MainLoop() {
 		log.Fatalf("could not fetch initial log stream position: %s", err)
 	}
 	if streamPos == nil {
-		streamPos = &LogStreamPosition{
+		streamPos = &shared.LogStreamPosition{
 			Filename: "",
 			Offset: 0,
 			BytesReadTotal: 0,
@@ -147,16 +149,16 @@ func (pgf *PGFisher) MainLoop() {
 
 func (pgf *PGFisher) loadPlugin() error {
 	var err error
-	args := PluginInitArgs{
-		dbh: pgf.dbh,
-		prometheusRegistry: pgf.prometheusRegistry,
-		args: "",
+	args := shared.PluginInitArgs{
+		DBH: pgf.dbh,
+		PrometheusRegistry: pgf.prometheusRegistry,
+		Args: "",
 	}
-	pgf.plugin, err = PGFisherPluginInit(args)
+	pgf.plugin, err = plugin.PGFisherPluginInit(args)
 	return err
 }
 
-func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *LogStreamPosition) error {
+func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *shared.LogStreamPosition) error {
 	tailfTimer := time.NewTimer(time.Hour)
 	nextFilename := ""
 
@@ -196,7 +198,7 @@ func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *LogStreamPosit
 	}
 }
 
-func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogStreamPosition) error {
+func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *shared.LogStreamPosition) error {
 	for {
 		reader.ByteOffset = 0
 		record, err := reader.Read()
@@ -223,7 +225,7 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 	}
 }
 
-func (pgf *PGFisher) persistLogStreamPosition(pos *LogStreamPosition) {
+func (pgf *PGFisher) persistLogStreamPosition(pos *shared.LogStreamPosition) {
 	data, err := json.Marshal(pos)
 	if err != nil {
 		panic(err)
@@ -242,8 +244,8 @@ func (pgf *PGFisher) persistLogStreamPosition(pos *LogStreamPosition) {
 	pgf.bytesReadSinceLastPersist = 0
 }
 
-func (pgf *PGFisher) fetchInitialLogStreamPosition() (*LogStreamPosition, error) {
-	var streamPosition *LogStreamPosition
+func (pgf *PGFisher) fetchInitialLogStreamPosition() (*shared.LogStreamPosition, error) {
+	var streamPosition *shared.LogStreamPosition
 	err := pgf.dbh.View(func (tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("pgfisher"))
 		if bucket == nil {
@@ -251,7 +253,7 @@ func (pgf *PGFisher) fetchInitialLogStreamPosition() (*LogStreamPosition, error)
 		}
 		data := bucket.Get([]byte("logStreamPosition"))
 		if data != nil {
-			var lsp LogStreamPosition
+			var lsp shared.LogStreamPosition
 			err := json.Unmarshal(data, &lsp)
 			if err != nil {
 				return fmt.Errorf("could not unmarshal logStreamPosition: %s", err)
