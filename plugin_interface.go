@@ -4,6 +4,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -62,6 +63,10 @@ func NewLogEntry(record []string) (*LogEntry, error) {
 	}, nil
 }
 
+func (le *LogEntry) LogTime(loc *time.Location) (time.Time, error) {
+	return time.ParseInLocation("2006-01-02 15:04:05 MST", le.record[LogTimeAttno], loc)
+}
+
 func (le *LogEntry) LogTimeString() string {
 	return le.record[LogTimeAttno]
 }
@@ -100,6 +105,10 @@ func (le *LogEntry) SessionLineNum() int64 {
 
 func (le *LogEntry) CommandTag() string {
 	return le.record[CommandTagAttno]
+}
+
+func (le *LogEntry) SessionStartTime(loc *time.Location) (time.Time, error) {
+	return time.ParseInLocation("2006-01-02 15:04:05 MST", le.record[SessionStartTimeAttno], loc)
 }
 
 func (le *LogEntry) SessionStartTimeString() string {
