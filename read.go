@@ -203,6 +203,7 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 		if err != nil {
 			return err
 		}
+		bytesRead := reader.ByteOffset
 		if len(record) < 23 {
 			log.Fatalf("unexpected record length %d", len(record))
 		}
@@ -212,10 +213,10 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 			log.Fatalf("the plugin's Process function failed: %s", err)
 		}
 
-		streamPos.Offset += reader.ByteOffset
-		streamPos.BytesReadTotal += reader.ByteOffset
-		pgf.bytesReadTotal.Add(float64(reader.ByteOffset))
-		pgf.bytesReadSinceLastPersist += reader.ByteOffset
+		streamPos.Offset += bytesRead
+		streamPos.BytesReadTotal += bytesRead
+		pgf.bytesReadTotal.Add(float64(bytesRead))
+		pgf.bytesReadSinceLastPersist += bytesRead
 		if pgf.bytesReadSinceLastPersist >= 1024 * 1024 * 32 {
 			pgf.persistLogStreamPosition(streamPos)
 		}
