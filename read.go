@@ -20,11 +20,6 @@ import (
     "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type LogStreamPosition struct {
-	Filename string `json:"filename"`
-	Offset int64 `json:"offset"`
-}
-
 type PGFisher struct {
 	dbh *bolt.DB
 	prometheusListener net.Listener
@@ -114,6 +109,7 @@ func (pgf *PGFisher) MainLoop() {
 		streamPos = &LogStreamPosition{
 			Filename: "",
 			Offset: 0,
+			BytesReadTotal: 0,
 		}
 	}
 	epollFilenameChan, files := pgf.doInitialRead(streamPos.Filename)
@@ -211,12 +207,13 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *LogSt
 			log.Fatalf("unexpected record length %d", len(record))
 		}
 
-		err = pgf.plugin.Process(record)
+		err = pgf.plugin.Process(streamPos, record)
 		if err != nil {
 			log.Fatalf("the plugin's Process function failed: %s", err)
 		}
 
 		streamPos.Offset += reader.ByteOffset
+		streamPos.BytesReadTotal += reader.ByteOffset
 		pgf.bytesReadTotal.Add(float64(reader.ByteOffset))
 		pgf.bytesReadSinceLastPersist += reader.ByteOffset
 		if pgf.bytesReadSinceLastPersist >= 1024 * 1024 * 32 {

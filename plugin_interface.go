@@ -15,8 +15,14 @@ type PluginInitArgs struct {
 	args string
 }
 
+type LogStreamPosition struct {
+	Filename string `json:"filename"`
+	Offset int64 `json:"offset"`
+	BytesReadTotal int64 `json:"bytesReadTotal"`
+}
+
 type Plugin interface {
-	Process(record []string) error
+	Process(streamPos *LogStreamPosition, record []string) error
 }
 
 const (

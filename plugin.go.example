@@ -16,7 +16,7 @@ type ExamplePlugin struct {
 	dbh *bolt.DB
 }
 
-func (p *ExamplePlugin) Process(record []string) error {
+func (p *ExamplePlugin) Process(streamPos *LogStreamPosition, record []string) error {
 	le, err := NewLogEntry(record)
 	if err != nil {
 		return err
