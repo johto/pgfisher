@@ -87,7 +87,7 @@ func (le *LogEntry) ProcessID() int {
 	return int(n)
 }
 
-func (le *LogEntry)ConnectionFrom() string {
+func (le *LogEntry) ConnectionFrom() string {
 	return le.record[ConnectionFromAttno]
 }
 
