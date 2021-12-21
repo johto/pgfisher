@@ -4,8 +4,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 	csv "github.com/johto/go-csvt"
 	"github.com/fsnotify/fsnotify"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -23,7 +21,7 @@ import (
 )
 
 type PGFisher struct {
-	dbh *bolt.DB
+	dbh *PGFisherDatabase
 	prometheusListener net.Listener
 	prometheusRegistry *prometheus.Registry
 
@@ -38,14 +36,6 @@ type PGFisher struct {
 }
 
 func NewPGFisher(dbh *bolt.DB, prometheusAddr string) *PGFisher {
-	err := dbh.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte("pgfisher"))
-		return err
-	})
-	if err != nil {
-		log.Fatalf("could not update database: %s", err)
-	}
-
 	listener, err := net.Listen("tcp", prometheusAddr)
 	if err != nil {
 		log.Fatalf("could not start listening on %s: %s", prometheusAddr, err)
@@ -70,7 +60,7 @@ func NewPGFisher(dbh *bolt.DB, prometheusAddr string) *PGFisher {
 	registry.MustRegister(bytesReadTotal)
 
 	pgf := &PGFisher{
-		dbh: dbh,
+		dbh: NewPGFisherDatabase(dbh),
 		prometheusListener: listener,
 		prometheusRegistry: registry,
 		newFilenameChan: make(chan string, 1),
@@ -103,17 +93,7 @@ func (pgf *PGFisher) MainLoop() {
 		log.Fatal(s.Serve(pgf.prometheusListener))
 	}()
 
-	streamPos, err := pgf.fetchInitialLogStreamPosition()
-	if err != nil {
-		log.Fatalf("could not fetch initial log stream position: %s", err)
-	}
-	if streamPos == nil {
-		streamPos = &shared.LogStreamPosition{
-			Filename: "",
-			Offset: 0,
-			BytesReadTotal: 0,
-		}
-	}
+	streamPos := pgf.dbh.ReadLogStreamPosition()
 	epollFilenameChan, files := pgf.doInitialRead(streamPos.Filename)
 	if streamPos.Filename == "" {
 		if len(files) == 0 {
@@ -133,7 +113,7 @@ func (pgf *PGFisher) MainLoop() {
 			log.Fatalf("could not open file %q: %s", filepath, err)
 		}
 
-		err = pgf.readFromFileUntilEOF(fh, streamPos)
+		err = pgf.readFromFileUntilEOF(fh, &streamPos)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -143,14 +123,14 @@ func (pgf *PGFisher) MainLoop() {
 			log.Fatalf("could not close file %q: %s", streamPos.Filename, err)
 		}
 
-		pgf.persistLogStreamPosition(streamPos)
+		pgf.persistLogStreamPosition(&streamPos)
 	}
 }
 
 func (pgf *PGFisher) loadPlugin() error {
 	var err error
 	args := shared.PluginInitArgs{
-		DBH: pgf.dbh,
+		DBH: pgf.dbh.BoltDBHandle(),
 		PrometheusRegistry: pgf.prometheusRegistry,
 		Args: "",
 	}
@@ -226,46 +206,8 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *share
 }
 
 func (pgf *PGFisher) persistLogStreamPosition(pos *shared.LogStreamPosition) {
-	data, err := json.Marshal(pos)
-	if err != nil {
-		panic(err)
-	}
-
-	err = pgf.dbh.Update(func (tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("pgfisher"))
-		if bucket == nil {
-			panic("nil bucket")
-		}
-		return bucket.Put([]byte("logStreamPosition"), data)
-	})
-	if err != nil {
-		log.Fatalf("could not write to %s: %s", pgf.dbh.Path(), err)
-	}
+	pgf.dbh.PersistLogStreamPosition(pos)
 	pgf.bytesReadSinceLastPersist = 0
-}
-
-func (pgf *PGFisher) fetchInitialLogStreamPosition() (*shared.LogStreamPosition, error) {
-	var streamPosition *shared.LogStreamPosition
-	err := pgf.dbh.View(func (tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("pgfisher"))
-		if bucket == nil {
-			panic("nil bucket")
-		}
-		data := bucket.Get([]byte("logStreamPosition"))
-		if data != nil {
-			var lsp shared.LogStreamPosition
-			err := json.Unmarshal(data, &lsp)
-			if err != nil {
-				return fmt.Errorf("could not unmarshal logStreamPosition: %s", err)
-			}
-			streamPosition = &lsp
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch initial position from %s: %s", pgf.dbh.Path(), err)
-	}
-	return streamPosition, nil
 }
 
 // runs in its own goroutine
