@@ -13,7 +13,7 @@ Writing a plugin
 ----------------
 
 The code in this repository does not build as provided.  Any user of this
-project is expected to write their own "plugin" package and drop is into a
+project is expected to write their own "plugin" package and drop it into a
 directory called plugin.  An example of such a plugin can be found in the
 [example\_plugin](https://github.com/johto/pgfisher/tree/master/example_plugin)
 directory.
