@@ -6,15 +6,16 @@ import (
 	pgfplugin "github.com/johto/pgfisher/plugin_interface"
 )
 
+// This struct should implement plugin_interface.Plugin.
+type ExamplePlugin struct {
+	dbh *bolt.DB
+}
+
 func PGFisherPluginInit(args pgfplugin.PluginInitArgs) (pgfplugin.Plugin, error) {
 	plugin := &ExamplePlugin{
 		dbh: args.DBH,
 	}
 	return plugin, nil
-}
-
-type ExamplePlugin struct {
-	dbh *bolt.DB
 }
 
 func (p *ExamplePlugin) Process(streamPos *pgfplugin.LogStreamPosition, record []string) error {
