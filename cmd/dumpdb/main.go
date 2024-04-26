@@ -1,11 +1,12 @@
 package main
 
 import (
-	bolt "go.etcd.io/bbolt"
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
+
+	bolt "go.etcd.io/bbolt"
 )
 
 func main() {
@@ -23,7 +24,7 @@ func main() {
 	var dumpBucket func(bucket *bolt.Bucket) (map[string]interface{}, error)
 	dumpBucket = func(bucket *bolt.Bucket) (map[string]interface{}, error) {
 		data := make(map[string]interface{})
-		bucket.ForEach(func (key []byte, value []byte) error {
+		bucket.ForEach(func(key []byte, value []byte) error {
 			if value == nil {
 				nestedBucket := bucket.Bucket(key)
 				if nestedBucket == nil {
@@ -47,7 +48,7 @@ func main() {
 		return data, nil
 	}
 	datas := make(map[string]interface{})
-	err = dbh.View(func (tx *bolt.Tx) error {
+	err = dbh.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			dumped, err := dumpBucket(b)
 			if err != nil {

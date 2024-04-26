@@ -1,23 +1,24 @@
 package main
 
 import (
-	bolt "go.etcd.io/bbolt"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	shared "github.com/johto/pgfisher/plugin_interface"
 	"strconv"
 	"strings"
 	"time"
+
+	shared "github.com/johto/pgfisher/internal/plugin_interface"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (
 	logPath string
 	// These should be read via flags
-	logGlob         = "postgresql-%Y-%m-%d.csv"
+	logGlob = "postgresql-%Y-%m-%d.csv"
 
 	// Extremely naive log_filename parser
 	re             = regexp.MustCompile(`%[mdHMS]`)
@@ -27,7 +28,7 @@ var (
 
 func printUsage(w io.Writer) {
 	programName := filepath.Base(os.Args[0])
-    fmt.Fprintf(w, `Usage:
+	fmt.Fprintf(w, `Usage:
   %[1]s [--help] COMMAND [ARG]...
 
 Commands:
@@ -103,8 +104,8 @@ func commandInitDB(args []string) {
 	fisherdb := NewPGFisherDatabase(boltdb)
 
 	streamPos := shared.LogStreamPosition{
-		Filename: logFile,
-		Offset: startOffset,
+		Filename:       logFile,
+		Offset:         startOffset,
 		BytesReadTotal: 0,
 	}
 
@@ -126,18 +127,18 @@ func main() {
 		commandArgs = os.Args[2:]
 	}
 
-	var printCommandUsage func (w io.Writer)
-	var executeCommand func (args []string)
+	var printCommandUsage func(w io.Writer)
+	var executeCommand func(args []string)
 	switch command {
-		case "tail":
-			printCommandUsage = printTailUsage
-			executeCommand = commandTail
-		case "initdb":
-			printCommandUsage = printInitDBUsage
-			executeCommand = commandInitDB
-		default:
-			fmt.Fprintf(os.Stderr, "unknown command %s\n", command)
-			os.Exit(1)
+	case "tail":
+		printCommandUsage = printTailUsage
+		executeCommand = commandTail
+	case "initdb":
+		printCommandUsage = printInitDBUsage
+		executeCommand = commandInitDB
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command %s\n", command)
+		os.Exit(1)
 	}
 
 	for _, arg := range commandArgs {

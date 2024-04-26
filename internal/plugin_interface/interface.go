@@ -1,24 +1,24 @@
 package plugin_interface
 
 import (
-	bolt "go.etcd.io/bbolt"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	bolt "go.etcd.io/bbolt"
 )
 
 type PluginInitArgs struct {
-	DBH *bolt.DB
+	DBH                *bolt.DB
 	PrometheusRegistry *prometheus.Registry
-	Args string
+	Args               string
 }
 
 type LogStreamPosition struct {
-	Filename string `json:"filename"`
-	Offset int64 `json:"offset"`
-	BytesReadTotal int64 `json:"bytesReadTotal"`
+	Filename       string `json:"filename"`
+	Offset         int64  `json:"offset"`
+	BytesReadTotal int64  `json:"bytesReadTotal"`
 }
 
 type Plugin interface {
@@ -61,8 +61,8 @@ type LogEntry struct {
 func NewLogEntry(record []string) (*LogEntry, error) {
 	// All supported versions should have the fields up to and including
 	// application_name.
-	if len(record) < 1 + ApplicationNameAttno {
-		return nil, fmt.Errorf("unexpected record length of %d; expected at least %d", len(record), 1 + ApplicationNameAttno)
+	if len(record) < 1+ApplicationNameAttno {
+		return nil, fmt.Errorf("unexpected record length of %d; expected at least %d", len(record), 1+ApplicationNameAttno)
 	}
 	return &LogEntry{
 		record: record,
