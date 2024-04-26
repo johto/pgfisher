@@ -1,9 +1,6 @@
 package main
 
 import (
-	bolt "go.etcd.io/bbolt"
-	csv "github.com/johto/go-csvt"
-	"github.com/fsnotify/fsnotify"
 	"io"
 	"log"
 	"net"
@@ -11,17 +8,20 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	plugin "github.com/johto/pgfisher/plugin"
-	shared "github.com/johto/pgfisher/plugin_interface"
 	"sort"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
+	csv "github.com/johto/go-csvt"
+	plugin "github.com/johto/pgfisher/internal/plugin"
+	shared "github.com/johto/pgfisher/internal/plugin_interface"
 	"github.com/prometheus/client_golang/prometheus"
-    "github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	bolt "go.etcd.io/bbolt"
 )
 
 type PGFisher struct {
-	dbh *PGFisherDatabase
+	dbh                *PGFisherDatabase
 	prometheusListener net.Listener
 	prometheusRegistry *prometheus.Registry
 
@@ -31,7 +31,7 @@ type PGFisher struct {
 	// main loop should use.
 	newFilenameChan chan string
 
-	bytesReadTotal prometheus.Counter
+	bytesReadTotal            prometheus.Counter
 	bytesReadSinceLastPersist int64
 }
 
@@ -60,11 +60,11 @@ func NewPGFisher(dbh *bolt.DB, prometheusAddr string) *PGFisher {
 	registry.MustRegister(bytesReadTotal)
 
 	pgf := &PGFisher{
-		dbh: NewPGFisherDatabase(dbh),
-		prometheusListener: listener,
-		prometheusRegistry: registry,
-		newFilenameChan: make(chan string, 1),
-		bytesReadTotal: bytesReadTotal,
+		dbh:                       NewPGFisherDatabase(dbh),
+		prometheusListener:        listener,
+		prometheusRegistry:        registry,
+		newFilenameChan:           make(chan string, 1),
+		bytesReadTotal:            bytesReadTotal,
 		bytesReadSinceLastPersist: 0,
 	}
 	return pgf
@@ -130,9 +130,9 @@ func (pgf *PGFisher) MainLoop() {
 func (pgf *PGFisher) loadPlugin() error {
 	var err error
 	args := shared.PluginInitArgs{
-		DBH: pgf.dbh.BoltDBHandle(),
+		DBH:                pgf.dbh.BoltDBHandle(),
 		PrometheusRegistry: pgf.prometheusRegistry,
-		Args: "",
+		Args:               "",
 	}
 	pgf.plugin, err = plugin.PGFisherPluginInit(args)
 	return err
@@ -165,12 +165,12 @@ func (pgf *PGFisher) readFromFileUntilEOF(fh *os.File, streamPos *shared.LogStre
 			// TODO: make configurable
 			tailfTimer.Reset(time.Second)
 			select {
-				case nextFilename = <-optNewFilenameChan:
-					log.Printf("read loop: will switch over to file %s when possible", nextFilename)
-					// Don't switch over until we get the next io.EOF, or we
-					// might miss lines at the very end of the file.
+			case nextFilename = <-optNewFilenameChan:
+				log.Printf("read loop: will switch over to file %s when possible", nextFilename)
+				// Don't switch over until we get the next io.EOF, or we
+				// might miss lines at the very end of the file.
 
-				case <-tailfTimer.C:
+			case <-tailfTimer.C:
 			}
 			// Try again
 			continue
@@ -199,7 +199,7 @@ func (pgf *PGFisher) readFromFileUntilError(reader *csv.Reader, streamPos *share
 		streamPos.BytesReadTotal += bytesRead
 		pgf.bytesReadTotal.Add(float64(bytesRead))
 		pgf.bytesReadSinceLastPersist += bytesRead
-		if pgf.bytesReadSinceLastPersist >= 1024 * 1024 * 32 {
+		if pgf.bytesReadSinceLastPersist >= 1024*1024*32 {
 			pgf.persistLogStreamPosition(streamPos)
 		}
 	}
@@ -214,21 +214,21 @@ func (pgf *PGFisher) persistLogStreamPosition(pos *shared.LogStreamPosition) {
 func (pgf *PGFisher) fsnotifyWatcherLoop(fsw *fsnotify.Watcher, pathGlob string, newFilenameChan chan<- string) {
 	for {
 		select {
-			case event := <-fsw.Events:
-				if event.Op & fsnotify.Create == fsnotify.Create {
-					path := event.Name
-					match, err := filepath.Match(pathGlob, path)
-					if err != nil {
-						log.Panic(err)
-					}
-					if match {
-						log.Printf("fsnotify: newly created file %q matches the glob", path)
-						newFilenameChan <- filepath.Base(path)
-					}
+		case event := <-fsw.Events:
+			if event.Op&fsnotify.Create == fsnotify.Create {
+				path := event.Name
+				match, err := filepath.Match(pathGlob, path)
+				if err != nil {
+					log.Panic(err)
 				}
+				if match {
+					log.Printf("fsnotify: newly created file %q matches the glob", path)
+					newFilenameChan <- filepath.Base(path)
+				}
+			}
 
-			case err := <-fsw.Errors:
-				log.Fatalf("fsnotify error: %s", err)
+		case err := <-fsw.Errors:
+			log.Fatalf("fsnotify error: %s", err)
 		}
 	}
 }
@@ -265,10 +265,10 @@ func (pgf *PGFisher) doInitialRead(initialFilename string) (<-chan string, []str
 eventDrainLoop:
 	for {
 		select {
-			case filename := <-epollFilenameChan:
-				files = append(files, filename)
-			default:
-				break eventDrainLoop
+		case filename := <-epollFilenameChan:
+			files = append(files, filename)
+		default:
+			break eventDrainLoop
 		}
 	}
 
@@ -308,22 +308,22 @@ func (pgf *PGFisher) directoryWatcherLoop(epollFilenameChan <-chan string, files
 		}
 
 		select {
-			case nextFileChan <- nextFilename:
-				currentFilename = path.Base(nextFilename)
-				files = files[1:]
+		case nextFileChan <- nextFilename:
+			currentFilename = path.Base(nextFilename)
+			files = files[1:]
 
-			case evfname := <-epollFilenameChan:
-				// Must sort after the file being currently read
-				if currentFilename != "" && path.Base(evfname) <= currentFilename {
-					log.Fatalf("newly created file %q does not sort after the current filename %q", evfname, currentFilename)
+		case evfname := <-epollFilenameChan:
+			// Must sort after the file being currently read
+			if currentFilename != "" && path.Base(evfname) <= currentFilename {
+				log.Fatalf("newly created file %q does not sort after the current filename %q", evfname, currentFilename)
+			}
+			// Must sort after any of the files we've already queued
+			for _, f := range files {
+				if path.Base(evfname) <= path.Base(f) {
+					log.Fatalf("newly created file %q does not sort after queued filename %q", evfname, f)
 				}
-				// Must sort after any of the files we've already queued
-				for _, f := range files {
-					if path.Base(evfname) <= path.Base(f) {
-						log.Fatalf("newly created file %q does not sort after queued filename %q", evfname, f)
-					}
-				}
-				files = append(files, evfname)
+			}
+			files = append(files, evfname)
 		}
 	}
 }

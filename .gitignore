@@ -1,4 +1,4 @@
 *.swp
-/plugin.go
-/dumpdb/dumpdb
-/pgfisher
+/internal/plugin
+/cmd/dumpdb/dumpdb
+/cmd/pgfisher/pgfisher

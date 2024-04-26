@@ -1,11 +1,12 @@
 package main
 
 import (
-	bolt "go.etcd.io/bbolt"
 	"encoding/json"
 	"fmt"
 	"log"
-	shared "github.com/johto/pgfisher/plugin_interface"
+
+	shared "github.com/johto/pgfisher/internal/plugin_interface"
+	bolt "go.etcd.io/bbolt"
 )
 
 type PGFisherDatabase struct {
@@ -42,7 +43,7 @@ func (db *PGFisherDatabase) PersistLogStreamPosition(pos *shared.LogStreamPositi
 		panic(err)
 	}
 
-	err = db.dbh.Update(func (tx *bolt.Tx) error {
+	err = db.dbh.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("pgfisher"))
 		if bucket == nil {
 			panic("nil bucket")
@@ -56,7 +57,7 @@ func (db *PGFisherDatabase) PersistLogStreamPosition(pos *shared.LogStreamPositi
 
 func (db *PGFisherDatabase) ReadLogStreamPosition() shared.LogStreamPosition {
 	var streamPosition shared.LogStreamPosition
-	err := db.dbh.View(func (tx *bolt.Tx) error {
+	err := db.dbh.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("pgfisher"))
 		if bucket == nil {
 			panic("nil bucket")

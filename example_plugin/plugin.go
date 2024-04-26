@@ -1,9 +1,10 @@
 package plugin
 
 import (
-	bolt "go.etcd.io/bbolt"
 	"fmt"
+
 	pgfplugin "github.com/johto/pgfisher/plugin_interface"
+	bolt "go.etcd.io/bbolt"
 )
 
 // This struct should implement plugin_interface.Plugin.
