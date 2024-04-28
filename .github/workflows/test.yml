@@ -1,0 +1,23 @@
+name: Test
+on:
+  push:
+     branches:
+       - master
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.22', '1.21']
+    name:  ${{ matrix.go-version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Test on Go ${{ matrix.pg }}
+        run: make test

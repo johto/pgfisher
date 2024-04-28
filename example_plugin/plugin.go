@@ -3,7 +3,7 @@ package plugin
 import (
 	"fmt"
 
-	pgfplugin "github.com/johto/pgfisher/plugin_interface"
+	pgfplugin "github.com/johto/pgfisher/internal/plugin_interface"
 	bolt "go.etcd.io/bbolt"
 )
 
